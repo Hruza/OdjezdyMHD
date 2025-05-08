@@ -1,0 +1,27 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Modular Data Boards</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div
+      id="departure-board"
+      class="board"
+      data-config='{
+        "type": "departure",
+        "drawConfigs": {
+            "platforms":["A", "C", "D"]
+        },
+        "apiUrl": "https://api.golemio.cz/v2/pid/departureboards",
+        "apiKeyLabel": "pidApiKey",
+        "names": ["Blatiny"],
+        "minutesBefore": -2,
+        "minutesAfter": 50
+    }'
+    ></div>
+
+    <script src="./widgets.js"></script>
+  </body>
+</html>
