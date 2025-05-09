@@ -55,6 +55,20 @@ function getPictogram(route) {
   }
 }
 
+function getTimeColor(minutes) {
+  if (minutes < 3) {
+    return "text-red-700";
+  } else if (minutes < 6) {
+    return "text-yellow-600";
+  } else if (minutes < 10) {
+    return "text-green-600";
+  } else if (minutes < 20) {
+    return "text-yellow-600";
+  } else {
+    return "text-red-700";
+  }
+}
+
 // Module handlers for different types
 const moduleHandlers = {
   departure: (container, data, configs) => {
@@ -82,7 +96,7 @@ const moduleHandlers = {
     for (const platform of platforms) {
       const platformContainer = document.createElement("div");
       platformContainer.className =
-        "platform-group max-w-150 my-4 p-4 bg-gray-100 rounded-lg text-center";
+        "platform-group max-w-150 my-4 p-4 bg-gray-300/60 backdrop-blur-3xl rounded-lg text-center";
       platformContainer.innerHTML = `<h3>Platform <b>${platform}</b></h3>`;
       departuresContainer.appendChild(platformContainer);
 
@@ -97,9 +111,13 @@ const moduleHandlers = {
           ),
           0
         );
+        const minutes = Math.ceil(
+          (new Date(departure.departure_timestamp.predicted) - new Date()) /
+            60000
+        )
         departureElement.innerHTML = `
-        <div class="p-4 grid grid-cols-2 gap-x-10 shadow-md rounded-lg border border-gray-200 m-2">
-        <div class="w-30 flex flex-col items-center justify-center mb-1">
+        <div class="p-4 grid grid-flow-col backdrop-opacity-20 bg-gray-100 gap-x-5 shadow-md rounded-lg border border-gray-200 m-2">
+        <div class="w-35 flex flex-col items-center justify-center mb-1">
           <div class="mt-1 flex items-center justify-center mb-1">
             <img src="${getPictogram(
               departure.route.short_name
@@ -112,7 +130,7 @@ const moduleHandlers = {
             ${departure.trip.headsign}
           </div>
         </div>
-        <div class="flex flex-col items-center justify-center mb-1">
+        <div class="flex flex-col items-center justify-center mb-1 mr-3">
           <div class="text-text1 mt-2 text-left">
           ${new Date(departure.departure_timestamp.predicted).toLocaleTimeString(
             [],
@@ -121,10 +139,7 @@ const moduleHandlers = {
           ${delay > 0 ? ` (+${delay} min)` : ""}
           </div>
           <div class="text-text1 mt-2 text-left">
-          <span class="text-green-600 font-bold">in ${Math.ceil(
-            (new Date(departure.departure_timestamp.predicted) - new Date()) /
-              60000
-          )} minutes</span>
+          <span class="${getTimeColor(minutes)} font-bold">in ${minutes} minutes</span>
           </div>
         </div>
         </div>
