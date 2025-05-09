@@ -97,7 +97,7 @@ const moduleHandlers = {
       const platformContainer = document.createElement("div");
       platformContainer.className =
         "platform-group max-w-150 my-4 p-4 bg-gray-300/60 backdrop-blur-3xl rounded-lg text-center";
-      platformContainer.innerHTML = `<h3>Platform <b>${platform}</b></h3>`;
+      platformContainer.innerHTML = `<h3>${data.stops[0].stop_name} <b>${platform}</b></h3>`;
       departuresContainer.appendChild(platformContainer);
 
       groupedDepartures[platform].forEach((departure) => {
@@ -173,7 +173,7 @@ async function fetchApiKey(type) {
 // Utility function to initialize elements with attached configurations
 async function initializeElement(element) {
   const config = JSON.parse(element.getAttribute("data-config"));
-  const { apiUrl, apiKeyLabel, type, drawConfigs, ...params } = config;
+  const { apiUrl, apiKeyLabel, type, drawConfigs, refreshInterval, ...params } = config;
 
   const apiKey = await fetchApiKey(apiKeyLabel);
   if (!apiKey) {
@@ -185,18 +185,28 @@ async function initializeElement(element) {
   const dataFetcher = new DataFetcher(apiUrl, apiKey);
   const renderer = new Renderer(element);
 
-  const data = await dataFetcher.fetchData(params);
+  const fetchAndRender = async () => {
+    const data = await dataFetcher.fetchData(params);
 
-  // Print the JSON response to the console
-  console.log("Fetched data:", data);
+    // Print the JSON response to the console
+    console.log("Fetched data:", data);
 
-  if (moduleHandlers[type]) {
-    renderer.render(data, moduleHandlers[type], drawConfigs);
-  } else {
-    console.warn(`No handler defined for type: ${type}`);
-    renderer.render(null, () => {
-      element.innerHTML = `<p>Unsupported module type: ${type}</p>`;
-    });
+    if (moduleHandlers[type]) {
+      renderer.render(data, moduleHandlers[type], drawConfigs);
+    } else {
+      console.warn(`No handler defined for type: ${type}`);
+      renderer.render(null, () => {
+        element.innerHTML = `<p>Unsupported module type: ${type}</p>`;
+      });
+    }
+  };
+
+  // Initial fetch and render
+  await fetchAndRender();
+
+  if (refreshInterval) {
+    // Set up interval for periodic updates
+    setInterval(fetchAndRender, refreshInterval * 1000);
   }
 }
 
