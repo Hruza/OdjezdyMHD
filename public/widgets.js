@@ -1,22 +1,31 @@
 // DataFetcher class to handle API requests
 class DataFetcher {
-  constructor(apiUrl, apiKey) {
+  constructor(apiUrl, apiKey = "") {
     this.apiUrl = apiUrl;
     this.apiKey = apiKey;
   }
 
   async fetchData(params = {}) {
     const url = new URL(this.apiUrl);
-    Object.keys(params).forEach((key) =>
-      url.searchParams.append(key, params[key])
-    );
+    Object.keys(params).forEach((key) => {
+      if (Array.isArray(params[key])) {
+      params[key].forEach((value) => url.searchParams.append(`${key}[]`, value));
+      } else {
+      url.searchParams.append(key, params[key]);
+      }
+    });
 
     try {
-      const response = await fetch(url, {
-        headers: {
-          "x-access-token": this.apiKey,
-        },
-      });
+      var response;
+      if (this.apiKey) {
+        response = await fetch(url, {
+          headers: {
+            "x-access-token": this.apiKey,
+          },
+        });
+      } else {
+        response = await fetch(url);
+      }
       if (!response.ok) {
         throw new Error(`Error: ${response.statusText}`);
       }
@@ -72,12 +81,16 @@ function getTimeColor(minutes) {
 // Module handlers for different types
 const moduleHandlers = {
   departure: (container, data, configs) => {
+    const stopIdToNameMap = data.stops.reduce((map, stop) => {
+      map[stop.stop_id] = stop.stop_name;
+      return map;
+    }, {});
     const groupedDepartures = data.departures.reduce((groups, departure) => {
-      const platform = departure.stop.platform_code || "Unknown";
-      if (!groups[platform]) {
-        groups[platform] = [];
+      const key = `${stopIdToNameMap[departure.stop.id] || "Unknown"}|${departure.stop.platform_code || "Unknown"}`;
+      if (!groups[key]) {
+      groups[key] = [];
       }
-      groups[platform].push(departure);
+      groups[key].push(departure);
       return groups;
     }, {});
 
@@ -89,15 +102,21 @@ const moduleHandlers = {
     );
     if (Object.keys(configs).includes("platforms")) {
       platforms = platforms.filter((platform) =>
-        configs.platforms.includes(platform)
+        configs.platforms.includes(platform.split("|")[1])
       );
     }
 
     for (const platform of platforms) {
+      const stopName = platform.split("|")[0];
+      const platformCode = platform.split("|")[1];
       const platformContainer = document.createElement("div");
       platformContainer.className =
-        "platform-group max-w-150 my-4 p-4 bg-gray-300/60 backdrop-blur-3xl rounded-lg text-center";
-      platformContainer.innerHTML = `<h3>${data.stops[0].stop_name} <b>${platform}</b></h3>`;
+        "platform-group max-w-150 my-4 p-4 bg-gray-300/60 backdrop-blur-xs rounded-lg text-center";
+      platformContainer.innerHTML = `
+      <div class="p-1 bg-gray-100 gap-x-5 shadow-md rounded-lg border border-gray-200 m-2">
+      <h3>${stopName} <b>${platformCode}</b></h3>
+      </div>
+      `;
       departuresContainer.appendChild(platformContainer);
 
       groupedDepartures[platform].forEach((departure) => {
@@ -114,9 +133,9 @@ const moduleHandlers = {
         const minutes = Math.ceil(
           (new Date(departure.departure_timestamp.predicted) - new Date()) /
             60000
-        )
+        );
         departureElement.innerHTML = `
-        <div class="p-4 grid grid-flow-col backdrop-opacity-20 bg-gray-100 gap-x-5 shadow-md rounded-lg border border-gray-200 m-2">
+        <div class="p-3 grid grid-flow-col bg-gray-100 gap-x-5 shadow-md rounded-lg border border-gray-200 m-2">
         <div class="w-35 flex flex-col items-center justify-center mb-1">
           <div class="mt-1 flex items-center justify-center mb-1">
             <img src="${getPictogram(
@@ -132,14 +151,15 @@ const moduleHandlers = {
         </div>
         <div class="flex flex-col items-center justify-center mb-1 mr-3">
           <div class="text-text1 mt-2 text-left">
-          ${new Date(departure.departure_timestamp.predicted).toLocaleTimeString(
-            [],
-            { hour: "2-digit", minute: "2-digit" }
-          )}
+          ${new Date(
+            departure.departure_timestamp.predicted
+          ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           ${delay > 0 ? ` (+${delay} min)` : ""}
           </div>
           <div class="text-text1 mt-2 text-left">
-          <span class="${getTimeColor(minutes)} font-bold">in ${minutes} minutes</span>
+          <span class="${getTimeColor(
+            minutes
+          )} font-bold">in ${minutes} minutes</span>
           </div>
         </div>
         </div>
@@ -173,16 +193,21 @@ async function fetchApiKey(type) {
 // Utility function to initialize elements with attached configurations
 async function initializeElement(element) {
   const config = JSON.parse(element.getAttribute("data-config"));
-  const { apiUrl, apiKeyLabel, type, drawConfigs, refreshInterval, ...params } = config;
+  const { apiUrl, apiKeyLabel, type, drawConfigs, refreshInterval, ...params } =
+    config;
 
-  const apiKey = await fetchApiKey(apiKeyLabel);
-  if (!apiKey) {
-    console.error(`API key not found for label: ${apiKeyLabel}`);
-    element.innerHTML = `<p>API key not found for label: ${apiKeyLabel}</p>`;
-    return;
+  var apiKey = null;
+  if (apiKeyLabel) {
+    apiKey = await fetchApiKey(apiKeyLabel);
+    if (!apiKey) {
+      console.error(`API key not found for label: ${apiKeyLabel}`);
+      element.innerHTML = `<p>API key not found for label: ${apiKeyLabel}</p>`;
+      return;
+    }
   }
 
   const dataFetcher = new DataFetcher(apiUrl, apiKey);
+
   const renderer = new Renderer(element);
 
   const fetchAndRender = async () => {
