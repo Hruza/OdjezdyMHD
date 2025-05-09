@@ -98,32 +98,36 @@ const moduleHandlers = {
           0
         );
         departureElement.innerHTML = `
-        <div class="p-4 grid grid-cols-[1fr_1fr] grid-rows-2 gap-x-10 shadow-md rounded-lg border border-gray-200 m-2">
-        <div class="flex items-center justify-center mb-1">
-        <img src="${getPictogram(
-          departure.route.short_name
-        )}" alt="Pictogram" class="w-8 h-8 mr-2">
-        <span class="text-gray-700 font-bold">${
-          departure.route.short_name
-        }</span>
+        <div class="p-4 grid grid-cols-2 gap-x-10 shadow-md rounded-lg border border-gray-200 m-2">
+        <div class="w-30 flex flex-col items-center justify-center mb-1">
+          <div class="mt-1 flex items-center justify-center mb-1">
+            <img src="${getPictogram(
+              departure.route.short_name
+            )}" alt="Pictogram" class="w-8 h-8 mr-2">
+            <span class="text-text1 font-bold">${
+              departure.route.short_name
+            }</span>
+          </div>
+          <div class="h-10 text-text1 mt-2 wrap-normal w-30 justify-center items-center flex">
+            ${departure.trip.headsign}
+          </div>
         </div>
-        <div class="text-gray-700 mt-2 text-left">
-        ${new Date(departure.departure_timestamp.predicted).toLocaleTimeString(
-          [],
-          { hour: "2-digit", minute: "2-digit" }
-        )}
-        ${delay > 0 ? ` (+${delay} min)` : ""}
+        <div class="flex flex-col items-center justify-center mb-1">
+          <div class="text-text1 mt-2 text-left">
+          ${new Date(departure.departure_timestamp.predicted).toLocaleTimeString(
+            [],
+            { hour: "2-digit", minute: "2-digit" }
+          )}
+          ${delay > 0 ? ` (+${delay} min)` : ""}
+          </div>
+          <div class="text-text1 mt-2 text-left">
+          <span class="text-green-600 font-bold">in ${Math.ceil(
+            (new Date(departure.departure_timestamp.predicted) - new Date()) /
+              60000
+          )} minutes</span>
+          </div>
         </div>
-        <div class="text-gray-700 mt-2 justify-center flex">
-          ${departure.trip.headsign}
         </div>
-        <div class="text-gray-700 mt-2 text-left">
-        <span class="text-green-600 font-bold">in ${Math.ceil(
-          (new Date(departure.departure_timestamp.predicted) - new Date()) /
-            60000
-        )} minutes</span>
-        </div>
-            </div>
         `;
         platformContainer.appendChild(departureElement);
       });
