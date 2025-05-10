@@ -1,6 +1,6 @@
-const { createServer } = require("node:http");
 const fs = require("fs");
 const path = require("path");
+const https = require('https');
 
 const hostname = "127.0.0.1";
 const port = 3000;
@@ -21,9 +21,15 @@ require("dotenv").config();
 
 const api_keys = {
   "pidApiKey": process.env.PID_API_KEY,
+  "weatherApiKey": process.env.WEATHER_API_KEY,
 };
 
-const server = createServer((req, res) => {
+const options = {
+  key: fs.readFileSync('key.pem'),
+  cert: fs.readFileSync('cert.pem'),
+};
+
+const server = https.createServer(options,(req, res) => {
   console.log(`Request for ${req.url} received.`);
   if (req.url.startsWith("/api/key")) {
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -57,5 +63,5 @@ const server = createServer((req, res) => {
 });
 
 server.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
+  console.log(`Server running at https://${hostname}:${port}/`);
 });

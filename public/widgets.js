@@ -1,26 +1,70 @@
 // DataFetcher class to handle API requests
 class DataFetcher {
-  constructor(apiUrl, apiKey = "") {
+  constructor(apiUrl, authorization = "", apiKey = "") {
     this.apiUrl = apiUrl;
+    this.authorization = authorization;
     this.apiKey = apiKey;
+  }
+
+  async replacePlaceholder(item, urlParams) {
+    if (typeof item === "string" && item.startsWith("$")) {
+      const paramKey = item.substring(1);
+      const [key, defaultValue] = paramKey.split("[");
+      return (await urlParams.get(key)) || defaultValue?.slice(0, -1) || item;
+    } else if (typeof item === "string" && item.startsWith("#")) {
+      switch (item.substring(1).toLowerCase()) {
+        case "lat":
+          const latPosition = await this.getGeolocation();
+          return latPosition?.latitude || null;
+        case "lon":
+          const lonPosition = await this.getGeolocation();
+          return lonPosition?.longitude || null;
+        case "apikey":
+          return this.apiKey;
+        default:
+          // Undefined placeholder, return as is
+          return item;
+      }
+    } else {
+      return await item;
+    }
+  }
+
+  getGeolocation() {
+    return new Promise((resolve, reject) => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          },
+          (error) => {
+            console.error("Geolocation error:", error);
+            resolve(null); // Resolve with null if geolocation fails
+          }
+        );
+      } else {
+        console.error("Geolocation is not supported by this browser.");
+        resolve(null); // Resolve with null if geolocation is not supported
+      }
+    });
   }
 
   async fetchData(params = {}) {
     const urlParams = new URLSearchParams(window.location.search);
 
     // Replace placeholders in params with URL parameter values
-    Object.keys(params).forEach((key) => {
-      if (typeof params[key] === "string" && params[key].startsWith("$")) {
-        return replacePlaceholder(params[key], urlParams); 
-      } else if (Array.isArray(params[key])) {
-        params[key] = params[key].map((item) => {
-          if (typeof item === "string" && item.startsWith("$")) {
-            return replacePlaceholder(item, urlParams); 
-         }
-          return item;
-        });
+    for (const key of Object.keys(params)) {
+      if (Array.isArray(params[key])) {
+        params[key] = await Promise.all(
+          params[key].map((item) => this.replacePlaceholder(item, urlParams))
+        );
+      } else {
+        params[key] = await this.replacePlaceholder(params[key], urlParams);
       }
-    });
+    }
 
     const url = new URL(this.apiUrl);
     Object.keys(params).forEach((key) => {
@@ -35,10 +79,10 @@ class DataFetcher {
 
     try {
       var response;
-      if (this.apiKey) {
+      if (this.authorization) {
         response = await fetch(url, {
           headers: {
-            "x-access-token": this.apiKey,
+            [this.authorization]: this.apiKey,
           },
         });
       } else {
@@ -96,14 +140,41 @@ function getTimeColor(minutes) {
   }
 }
 
-function replacePlaceholder(item, urlParams) {
-  const paramKey = item.substring(1);
-  const [key, defaultValue] = paramKey.split("[");
-  return urlParams.get(key) || defaultValue?.slice(0, -1) || item;
-}
-
 // Module handlers for different types
 const moduleHandlers = {
+  weather: (container, data) => {
+    const weatherContainer = document.createElement("div");
+    weatherContainer.className =
+      "flex flex-wrap gap-4 flex-center justify-center";
+    const weatherElement = document.createElement("div");
+    weatherElement.className =
+      "weather-item p-4 bg-gray-300/60 backdrop-blur-xs rounded-lg text-center mt-2";
+    weatherElement.innerHTML = `
+      <div class="text-center flex items-center justify-center gap-4">
+      <div>
+        <p class="text-2xl font-bold text-text-1">${
+          data.main.temp.toFixed(1)}°C</p>
+        <p class="text-sm text-gray-500">Feels like ${
+          data.main.feels_like.toFixed(1)}°C</p>
+      </div>
+      <div class="flex flex-col text-sm">
+        <div class="text-center">
+        <span class="block text-gray-500">Min</span>
+        <span class="text-blue-800">${data.main.temp_min.toFixed(
+          1
+        )}°C</span>
+        </div>
+        <div class="text-center mt-1">
+        <span class="block text-gray-500">Max</span>
+        <span class="text-red-700">${
+          data.main.temp_max.toFixed(1)}°C</span>
+        </div>
+      </div>
+      </div>
+    `;
+    weatherContainer.appendChild(weatherElement);
+    container.appendChild(weatherContainer);
+  },
   departure: (container, data, configs) => {
     const stopIdToNameMap = data.stops.reduce((map, stop) => {
       map[stop.stop_id] = stop.stop_name;
@@ -167,22 +238,22 @@ const moduleHandlers = {
             <img src="${getPictogram(
               departure.route.short_name
             )}" alt="Pictogram" class="w-8 h-8 mr-2">
-            <span class="text-text1 font-bold">${
+            <span class="text-text-1 font-bold">${
               departure.route.short_name
             }</span>
           </div>
-          <div class="h-10 text-text1 mt-2 wrap-normal w-30 justify-center items-center flex">
+          <div class="h-10 text-text-1 mt-2 wrap-normal w-30 justify-center items-center flex">
             ${departure.trip.headsign}
           </div>
         </div>
         <div class="flex flex-col items-center justify-center mb-1 mr-3">
-          <div class="text-text1 mt-2 text-left">
+          <div class="text-text-1 mt-2 text-left">
           ${new Date(
             departure.departure_timestamp.predicted
           ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           ${delay > 0 ? ` (+${delay} min)` : ""}
           </div>
-          <div class="text-text1 mt-2 text-left">
+          <div class="text-text-1 mt-2 text-left">
           <span class="${getTimeColor(
             minutes
           )} font-bold">in ${minutes} minutes</span>
@@ -219,8 +290,15 @@ async function fetchApiKey(type) {
 // Utility function to initialize elements with attached configurations
 async function initializeElement(element) {
   const config = JSON.parse(element.getAttribute("data-config"));
-  const { apiUrl, apiKeyLabel, type, drawConfigs, refreshInterval, ...params } =
-    config;
+  const {
+    apiUrl,
+    apiKeyLabel,
+    authorization,
+    type,
+    drawConfigs,
+    refreshInterval,
+    ...params
+  } = config;
 
   var apiKey = null;
   if (apiKeyLabel) {
@@ -232,7 +310,7 @@ async function initializeElement(element) {
     }
   }
 
-  const dataFetcher = new DataFetcher(apiUrl, apiKey);
+  const dataFetcher = new DataFetcher(apiUrl, authorization, apiKey);
 
   const renderer = new Renderer(element);
 

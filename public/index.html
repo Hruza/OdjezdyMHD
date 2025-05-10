@@ -6,15 +6,35 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body class="bg-gradient-to-bl from-indigo-300 via-purple-300 to-pink-400">
+   <!-- <div
+      class="fixed top-0 left-0 right-0 bottom-0"
+    style="background: url('https://cataas.com/cat') no-repeat center center; background-size: cover;"></div>
+    -->
+
+    <div
+      id="wetaher"
+      class="weather-container"
+      data-config='{
+        "type": "weather",
+        "refreshInterval":1800,
+        "apiUrl": "https://api.openweathermap.org/data/2.5/weather",
+        "apiKeyLabel": "weatherApiKey",
+        "lat": "#lat",
+        "lon": "#lon",
+        "appid": "#apikey",
+        "units": "metric"
+    }'
+    ></div>
     <div
       id="departure-board"
       class="board"
       data-config='{
         "type": "departure",
         "drawConfigs": {
-            
+            "platforms":["A", "C", "D"]
         },
-        "refreshInterval":60,
+        "refreshInterval":30,
+        "authorization": "x-access-token",
         "apiUrl": "https://api.golemio.cz/v2/pid/departureboards",
         "apiKeyLabel": "pidApiKey",
         "names": ["$name[Blatiny]"],

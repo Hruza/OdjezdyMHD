@@ -138,3 +138,6 @@ dist
 # project specific files
 src/api_data.json
 travel-*.svg
+cert.csr
+cert.pem
+key.pem
