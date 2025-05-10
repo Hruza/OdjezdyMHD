@@ -5,12 +5,12 @@
     <title>Modular Data Boards</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
-  <body class="bg-gradient-to-bl from-indigo-300 via-purple-300 to-pink-400">
-   <!-- <div
-      class="fixed top-0 left-0 right-0 bottom-0"
+  <body class="bg-gradient-to-bl from-emerald-300 via-cyan-300 to-blue-300">
+    <!-- <div
+    <div
+    class="fixed top-0 left-0 right-0 bottom-0"
     style="background: url('https://cataas.com/cat') no-repeat center center; background-size: cover;"></div>
-    -->
-
+    
     <div
       id="wetaher"
       class="weather-container"
@@ -25,6 +25,21 @@
         "units": "metric"
     }'
     ></div>
+    -->
+
+    <div
+      id="weather"
+      class="weather-container"
+      data-config='{
+      "type": "weather_yr",
+      "refreshInterval":1800,
+      "apiUrl": "https://api.met.no/weatherapi/locationforecast/2.0/compact",
+      "apiKeyLabel": "",
+      "lat": "#lat",
+      "lon": "#lon"
+  }'
+    ></div>
+
     <div
       id="departure-board"
       class="board"
@@ -44,6 +59,7 @@
     }'
     ></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="./widgets.js"></script>
   </body>
 </html>

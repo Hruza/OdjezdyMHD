@@ -142,7 +142,105 @@ function getTimeColor(minutes) {
 
 // Module handlers for different types
 const moduleHandlers = {
-  weather: (container, data) => {
+  weather_yr: (container, data) => {
+    // Ensure Chart.js is loaded
+    if (typeof Chart === "undefined") {
+      console.error(
+        "Chart.js is not loaded. Please include it in your project."
+      );
+    }
+
+    const weatherContainer = document.createElement("div");
+    weatherContainer.className =
+      "flex flex-wrap gap-4 flex-center justify-center";
+    const backgroundContainer = document.createElement("div");
+    backgroundContainer.className =
+      "bg-gray-300/60 backdrop-blur-xs rounded-lg text-center mt-4 p-4";
+    const weatherElement = document.createElement("div");
+    weatherElement.className =
+      "p-1 bg-gray-100 gap-x-5 shadow-md rounded-lg border border-gray-200";
+    const canvas = document.createElement("canvas");
+    canvas.width = 500;
+    canvas.height = 150;
+    weatherElement.appendChild(canvas);
+
+    const temperatures = data.properties.timeseries
+      .slice(0, 48)
+      .map((entry) => entry.data.instant.details.air_temperature);
+    const timestamps = data.properties.timeseries.slice(0, 48).map((entry) =>
+      new Date(entry.time).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: timestamps,
+        datasets: [
+          {
+            data: temperatures,
+            borderColor: "rgba(214,158,46, 1)",
+            backgroundColor: "rgba(214,158,46, 0.3)",
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0, // Remove markers
+          },
+        ],
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            enabled: false, // Disable tooltips
+          },
+        },
+        scales: {
+          x: {
+            ticks: {
+              callback: function (value, index) {
+                return parseInt(this.getLabelForValue(value).split(":")[0]) %
+                  4 ===
+                  0
+                  ? this.getLabelForValue(value)
+                  : "";
+              },
+              autoSkip: false,
+            },
+            grid: {
+              display: true,
+              drawTicks: true,
+              tickColor: "rgba(0, 0, 0, 0.1)",
+              tickLength: 0,
+              drawOnChartArea: true,
+              drawBorder: true,
+              color: function (context) {
+                return context.tick.label === ""
+                  ? "transparent"
+                  : "rgba(0, 0, 0, 0.2)";
+              },
+            },
+          },
+          y: {
+            color: "rgba(0, 0, 0, 0.05)",
+            grid:{
+              tickLength: 0,
+            }
+          },
+        },
+      },
+    });
+    backgroundContainer.appendChild(weatherElement);
+    weatherContainer.appendChild(backgroundContainer);
+    container.appendChild(weatherContainer);
+  },
+  weather_open: (container, data) => {
     const weatherContainer = document.createElement("div");
     weatherContainer.className =
       "flex flex-wrap gap-4 flex-center justify-center";
@@ -152,22 +250,21 @@ const moduleHandlers = {
     weatherElement.innerHTML = `
       <div class="text-center flex items-center justify-center gap-4">
       <div>
-        <p class="text-2xl font-bold text-text-1">${
-          data.main.temp.toFixed(1)}°C</p>
-        <p class="text-sm text-gray-500">Feels like ${
-          data.main.feels_like.toFixed(1)}°C</p>
+        <p class="text-2xl font-bold text-text-1">${data.main.temp.toFixed(
+          1
+        )}°C</p>
+        <p class="text-sm text-gray-500">Feels like ${data.main.feels_like.toFixed(
+          1
+        )}°C</p>
       </div>
       <div class="flex flex-col text-sm">
         <div class="text-center">
         <span class="block text-gray-500">Min</span>
-        <span class="text-blue-800">${data.main.temp_min.toFixed(
-          1
-        )}°C</span>
+        <span class="text-blue-800">${data.main.temp_min.toFixed(1)}°C</span>
         </div>
         <div class="text-center mt-1">
         <span class="block text-gray-500">Max</span>
-        <span class="text-red-700">${
-          data.main.temp_max.toFixed(1)}°C</span>
+        <span class="text-red-700">${data.main.temp_max.toFixed(1)}°C</span>
         </div>
       </div>
       </div>
@@ -193,7 +290,7 @@ const moduleHandlers = {
 
     const departuresContainer = document.createElement("div");
     departuresContainer.className =
-      "flex flex-wrap gap-4 flex-center justify-center";
+      "flex flex-wrap gap-x-4 flex-center justify-center mb-4";
     var platforms = Object.keys(groupedDepartures).sort((a, b) =>
       a.localeCompare(b)
     );
@@ -208,7 +305,7 @@ const moduleHandlers = {
       const platformCode = platform.split("|")[1];
       const platformContainer = document.createElement("div");
       platformContainer.className =
-        "platform-group max-w-150 my-4 p-4 bg-gray-300/60 backdrop-blur-xs rounded-lg text-center";
+        "platform-group max-w-150 mt-4 p-4 bg-gray-300/60 backdrop-blur-xs rounded-lg text-center";
       platformContainer.innerHTML = `
       <div class="p-1 bg-gray-100 gap-x-5 shadow-md rounded-lg border border-gray-200 m-2">
       <h3>${stopName} <b>${platformCode}</b></h3>
@@ -351,4 +448,5 @@ async function initialize() {
   });
 }
 
+// Initialize the application
 initialize();
