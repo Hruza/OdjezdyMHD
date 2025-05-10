@@ -32,9 +32,16 @@ class DataFetcher {
 
   getGeolocation() {
     return new Promise((resolve, reject) => {
-      if (navigator.geolocation) {
+      if (this.position) {
+        resolve({
+          latitude: this.position.coords.latitude,
+          longitude: this.position.coords.longitude,
+        });
+        return;
+      } else if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
+            this.position = position;
             resolve({
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
@@ -54,9 +61,9 @@ class DataFetcher {
 
   async fetchData(params = {}) {
     const urlParams = new URLSearchParams(window.location.search);
-
     // Replace placeholders in params with URL parameter values
     for (const key of Object.keys(params)) {
+      console.time(`Iteration for key: ${key}`);
       if (Array.isArray(params[key])) {
         params[key] = await Promise.all(
           params[key].map((item) => this.replacePlaceholder(item, urlParams))
@@ -64,6 +71,7 @@ class DataFetcher {
       } else {
         params[key] = await this.replacePlaceholder(params[key], urlParams);
       }
+      console.timeEnd(`Iteration for key: ${key}`);
     }
 
     const url = new URL(this.apiUrl);
@@ -77,6 +85,7 @@ class DataFetcher {
       }
     });
 
+    console.log("Fetching data from URL:", url.toString());
     try {
       var response;
       if (this.authorization) {
@@ -103,7 +112,7 @@ class DataFetcher {
 class Renderer {
   constructor(container) {
     this.container = container;
-    this.container.innerHTML = "Loading...";
+    this.container.innerHTML = "";
   }
 
   render(data, renderCallback, drawConfigs) {
@@ -158,7 +167,7 @@ const moduleHandlers = {
       "bg-gray-300/60 backdrop-blur-xs rounded-lg text-center mt-4 p-4";
     const weatherElement = document.createElement("div");
     weatherElement.className =
-      "p-1 bg-gray-100 gap-x-5 shadow-md rounded-lg border border-gray-200";
+      "py-2 pr-3 bg-gray-100 gap-x-5 shadow-md rounded-lg border border-gray-200";
     const canvas = document.createElement("canvas");
     canvas.width = 500;
     canvas.height = 150;
@@ -167,6 +176,9 @@ const moduleHandlers = {
     const temperatures = data.properties.timeseries
       .slice(0, 48)
       .map((entry) => entry.data.instant.details.air_temperature);
+    const precipitation_amount = data.properties.timeseries
+      .slice(0, 48)
+      .map((entry) => entry.data.next_1_hours.details.precipitation_amount);
     const timestamps = data.properties.timeseries.slice(0, 48).map((entry) =>
       new Date(entry.time).toLocaleTimeString([], {
         hour: "2-digit",
@@ -175,11 +187,12 @@ const moduleHandlers = {
     );
 
     new Chart(canvas, {
-      type: "line",
+      //type: "line",
       data: {
         labels: timestamps,
         datasets: [
           {
+            type: "line",
             data: temperatures,
             borderColor: "rgba(214,158,46, 1)",
             backgroundColor: "rgba(214,158,46, 0.3)",
@@ -187,6 +200,16 @@ const moduleHandlers = {
             fill: true,
             tension: 0.4,
             pointRadius: 0, // Remove markers
+            yAxisID: "y",
+            order: 2,
+          },
+          {
+            type: "bar",
+            data: precipitation_amount,
+            backgroundColor: "rgba(43, 127, 255, 0.5)",
+            borderWidth: 0,
+            yAxisID: "y1",
+            order: 1,
           },
         ],
       },
@@ -221,17 +244,32 @@ const moduleHandlers = {
               drawOnChartArea: true,
               drawBorder: true,
               color: function (context) {
-                return context.tick.label === ""
-                  ? "transparent"
-                  : "rgba(0, 0, 0, 0.2)";
+                console.log(context);
+                if (context.type === "scale") {
+                  return "transparent";
+                } else if (context.tick.label === "") {
+                  return "transparent";
+                } else if (context.tick.label === "00:00") {
+                  return "rgba(0, 0, 0, 0.6)";
+                } else {
+                  return "rgba(0, 0, 0, 0.2)";
+                }
               },
             },
           },
           y: {
-            color: "rgba(0, 0, 0, 0.05)",
-            grid:{
+            position: "left",
+            title: {
+              display: true,
+            },
+            grid: {
               tickLength: 0,
-            }
+            },
+          },
+          y1: {
+            display: false,
+            min: 0,
+            max: 10,
           },
         },
       },
