@@ -6,12 +6,30 @@ class DataFetcher {
   }
 
   async fetchData(params = {}) {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Replace placeholders in params with URL parameter values
+    Object.keys(params).forEach((key) => {
+      if (typeof params[key] === "string" && params[key].startsWith("$")) {
+        return replacePlaceholder(params[key], urlParams); 
+      } else if (Array.isArray(params[key])) {
+        params[key] = params[key].map((item) => {
+          if (typeof item === "string" && item.startsWith("$")) {
+            return replacePlaceholder(item, urlParams); 
+         }
+          return item;
+        });
+      }
+    });
+
     const url = new URL(this.apiUrl);
     Object.keys(params).forEach((key) => {
       if (Array.isArray(params[key])) {
-      params[key].forEach((value) => url.searchParams.append(`${key}[]`, value));
+        params[key].forEach((value) =>
+          url.searchParams.append(`${key}[]`, value)
+        );
       } else {
-      url.searchParams.append(key, params[key]);
+        url.searchParams.append(key, params[key]);
       }
     });
 
@@ -55,7 +73,7 @@ class Renderer {
 }
 
 function getPictogram(route) {
-  if (route in ["A", "B", "C", "D"]) {
+  if (["A", "B", "C", "D"].includes(route)) {
     return "./img/travel-metro.svg";
   } else if (route < 100) {
     return "./img/travel-tram.svg";
@@ -78,6 +96,12 @@ function getTimeColor(minutes) {
   }
 }
 
+function replacePlaceholder(item, urlParams) {
+  const paramKey = item.substring(1);
+  const [key, defaultValue] = paramKey.split("[");
+  return urlParams.get(key) || defaultValue?.slice(0, -1) || item;
+}
+
 // Module handlers for different types
 const moduleHandlers = {
   departure: (container, data, configs) => {
@@ -86,9 +110,11 @@ const moduleHandlers = {
       return map;
     }, {});
     const groupedDepartures = data.departures.reduce((groups, departure) => {
-      const key = `${stopIdToNameMap[departure.stop.id] || "Unknown"}|${departure.stop.platform_code || "Unknown"}`;
+      const key = `${stopIdToNameMap[departure.stop.id] || "Unknown"}|${
+        departure.stop.platform_code || "Unknown"
+      }`;
       if (!groups[key]) {
-      groups[key] = [];
+        groups[key] = [];
       }
       groups[key].push(departure);
       return groups;

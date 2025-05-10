@@ -39,7 +39,7 @@ const server = createServer((req, res) => {
     }
   } else {
     // Serve static files
-    const filePath = req.url === "/" ? "index.html" : req.url.substring(1);
+    const filePath = req.url === "/" ? "index.html" : req.url.substring(1).split("?")[0];
     const ext = path.extname(filePath);
     const contentType = mimeTypes[ext] || "application/octet-stream";
 
