@@ -187,10 +187,17 @@ const moduleHandlers = {
     );
 
     new Chart(canvas, {
-      //type: "line",
       data: {
         labels: timestamps,
         datasets: [
+          {
+            type: "bar",
+            data: precipitation_amount,
+            backgroundColor: "rgba(43, 127, 255, 0.5)",
+            borderWidth: 0,
+            yAxisID: "y1",
+            order: 1,
+          },
           {
             type: "line",
             data: temperatures,
@@ -203,14 +210,6 @@ const moduleHandlers = {
             yAxisID: "y",
             order: 2,
           },
-          {
-            type: "bar",
-            data: precipitation_amount,
-            backgroundColor: "rgba(43, 127, 255, 0.5)",
-            borderWidth: 0,
-            yAxisID: "y1",
-            order: 1,
-          },
         ],
       },
       options: {
@@ -221,7 +220,27 @@ const moduleHandlers = {
             display: false,
           },
           tooltip: {
-            enabled: false, // Disable tooltips
+            enabled: true, // Enable tooltips
+            mode: "index",
+            intersect: false,
+            position: "nearest",
+            backgroundColor: "rgba(243, 244, 246, 0.7)",
+            titleColor: "rgb(26, 32, 44)",
+            bodyColor: "rgb(26, 32, 44)",
+            displayColors: false,
+            itemSort: function (a, b) {
+              return b.datasetIndex - a.datasetIndex; // Sort by the raw data values
+            },
+            callbacks: {
+              label: function (context) {
+                if (context.datasetIndex === 1) {
+                  return `${context.raw}°C`;
+                } else if (context.datasetIndex === 0) {
+                  return `${context.raw} mm`;
+                }
+                return context.raw;
+              },
+            },
           },
         },
         scales: {
@@ -244,7 +263,6 @@ const moduleHandlers = {
               drawOnChartArea: true,
               drawBorder: true,
               color: function (context) {
-                console.log(context);
                 if (context.type === "scale") {
                   return "transparent";
                 } else if (context.tick.label === "") {
@@ -317,7 +335,7 @@ const moduleHandlers = {
     }, {});
     const groupedDepartures = data.departures.reduce((groups, departure) => {
       const key = `${stopIdToNameMap[departure.stop.id] || "Unknown"}|${
-        departure.stop.platform_code || "Unknown"
+        departure.stop.platform_code || ""
       }`;
       if (!groups[key]) {
         groups[key] = [];
@@ -325,7 +343,6 @@ const moduleHandlers = {
       groups[key].push(departure);
       return groups;
     }, {});
-
     const departuresContainer = document.createElement("div");
     departuresContainer.className =
       "flex flex-wrap gap-x-4 flex-center justify-center mb-4";
@@ -427,6 +444,7 @@ async function initializeElement(element) {
   const config = JSON.parse(element.getAttribute("data-config"));
   const {
     apiUrl,
+    apiKey,
     apiKeyLabel,
     authorization,
     type,
@@ -435,17 +453,17 @@ async function initializeElement(element) {
     ...params
   } = config;
 
-  var apiKey = null;
-  if (apiKeyLabel) {
-    apiKey = await fetchApiKey(apiKeyLabel);
-    if (!apiKey) {
+  var apiKeySelected = apiKey;
+  if (!apiKeySelected && apiKeyLabel) {
+    apiKeySelected = await fetchApiKey(apiKeyLabel);
+    if (!apiKeySelected) {
       console.error(`API key not found for label: ${apiKeyLabel}`);
       element.innerHTML = `<p>API key not found for label: ${apiKeyLabel}</p>`;
       return;
     }
   }
 
-  const dataFetcher = new DataFetcher(apiUrl, authorization, apiKey);
+  const dataFetcher = new DataFetcher(apiUrl, authorization, apiKeySelected);
 
   const renderer = new Renderer(element);
 
