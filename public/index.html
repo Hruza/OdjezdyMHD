@@ -5,8 +5,9 @@
     <title>Modular Data Boards</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
-  <body class="bg-gradient-to-bl from-emerald-300 via-cyan-300 to-blue-300">
-    <!-- <div
+  <body class="bg-fixed bg-gradient-to-b from-[#437ccc] to-[#2292A4]">
+    <div id="dashboard-container" class="snap-y snap-mandatory overflow-y-scroll scroll-smooth h-screen">
+      <!-- <div
     <div
     class="fixed top-0 left-0 right-0 bottom-0"
     style="background: url('https://cataas.com/cat') no-repeat center center; background-size: cover;"></div>
@@ -27,38 +28,59 @@
     ></div>
     -->
 
-    <div
-      id="weather"
-      class="weather-container"
-      data-config='{
-        "type": "weather_yr",
-        "refreshInterval":1800,
-        "apiUrl": "https://api.met.no/weatherapi/locationforecast/2.0/compact",
-        "apiKeyLabel": "",
-        "lat": "#lat",
-        "lon": "#lon"
+      <div
+        id="news"
+        class="news-container snap-start sticky top-0 z-10"
+        data-config='{
+        "type": "news_summary",
+        "refreshInterval": 1800,
+        "apiUrl": "./api/analyze-news"
+        }'
+      ></div>
+      <script>
+        const container = document.getElementById("dashboard-container")
+        container.addEventListener("scroll", () => {
+          const newsContainer = document.getElementById("news");
+          const scrollTop =
+            window.scrollY || container.scrollTop;
+          const maxScroll = 80; // Adjust this value as needed
+          const opacity = Math.max(1 - scrollTop / maxScroll, 0);
+          newsContainer.style.opacity = opacity;
+        });
+      </script>
+
+      <div
+        id="weather"
+        class="weather-container snap-start scroll-smooth"
+        data-config='{
+          "type": "weather_yr",
+          "refreshInterval":1800,
+          "apiUrl": "https://api.met.no/weatherapi/locationforecast/2.0/compact",
+          "apiKeyLabel": "",
+          "lat": "#lat",
+          "lon": "#lon"
+        }'
+      ></div>
+
+      <div
+        id="departure-board"
+        class="board snap-start scroll-smooth"
+        data-config='{
+          "type": "departure",
+          "drawConfigs": {
+            "platforms": ["A","C","D"]
+          },
+          "refreshInterval":30,
+          "authorization": "x-access-token",
+          "apiUrl": "https://api.golemio.cz/v2/pid/departureboards",
+          "apiKeyLabel": "pidApiKey",
+          "names": ["$name[Blatiny]"],
+          "minutesBefore": -2,
+          "minutesAfter": 50,
+          "limit":50
       }'
-    ></div>
-
-    <div
-      id="departure-board"
-      class="board"
-      data-config='{
-        "type": "departure",
-        "drawConfigs": {
-            "platforms":["A", "C", "D"]
-        },
-        "refreshInterval":30,
-        "authorization": "x-access-token",
-        "apiUrl": "https://api.golemio.cz/v2/pid/departureboards",
-        "apiKeyLabel": "pidApiKey",
-        "names": ["$name[Blatiny]"],
-        "minutesBefore": -2,
-        "minutesAfter": 50,
-        "limit":50
-    }'
-    ></div>
-
+      ></div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="./widgets.js"></script>
   </body>

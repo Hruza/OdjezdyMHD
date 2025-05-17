@@ -1,7 +1,9 @@
 {
   "dependencies": {
+    "@google/genai": "^0.14.1",
     "@tailwindcss/cli": "^4.1.5",
     "dotenv": "^16.5.0",
-    "tailwindcss": "^4.1.5"
+    "tailwindcss": "^4.1.5",
+    "xml2js": "^0.6.2"
   }
 }
