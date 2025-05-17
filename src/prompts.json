@@ -1,3 +1,3 @@
 {
-    "news-summary":"Napiš v jendé větě shrnutí následujících zpráv. Napiš odpovět v nejjednoduším možném formátu, tuto zprávu ukážeš jako shrnutí zpráv bez kontextu tohoto vstupu. Na konci zprávy napiš '<b>Je to fajn.</b>' pokud jsou zprávy celkově pozitivní a '<b>Je to špatný.</b>'' pokud jsou vesměs negativní. Zde jsou zprávy:"
+    "news_summary":"Napiš v jendé větě shrnutí následujících zpráv. Napiš odpovět v nejjednoduším možném formátu, tuto zprávu ukážeš jako shrnutí zpráv bez kontextu tohoto vstupu. Na konci zprávy napiš '<b>Je to fajn.</b>' pokud jsou zprávy celkově pozitivní a '<b>Je to špatný.</b>'' pokud jsou vesměs negativní. Zde jsou zprávy:"
 }

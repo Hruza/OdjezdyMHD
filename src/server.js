@@ -70,7 +70,7 @@ const server = https.createServer(options, async (req, res) => {
         .map((item) => `${item.title}: ${item.description}`)
         .join("\n");
 
-      const prompt = JSON.parse(fs.readFileSync("prompts.json", "utf-8")).news-analysis;
+      const prompt = JSON.parse(fs.readFileSync("./src/prompts.json", "utf-8")).news_summary;
 
       // Use Google AI to analyze the news content
       const response = await ai.models.generateContent({
