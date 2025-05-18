@@ -39,14 +39,18 @@ const server = https.createServer(options, async (req, res) => {
 
   if (req.url.startsWith("/api/news")) {
     // Endpoint for RSS
-    const rssUrl = "https://ct24.ceskatelevize.cz/rss/hlavni-zpravy";
+    const url = new URL(req.url, `https://${req.headers.host}`);
+    const rssUrl =
+      url.searchParams.get("source") ||
+      "https://ct24.ceskatelevize.cz/rss/hlavni-zpravy";
+    const nDays = url.searchParams.get("nDays") || 1;
 
     try {
       // Fetch RSS data
       const rssData = await fetchRSS(rssUrl);
 
       // Parse RSS data
-      const news = await parseRSS(rssData);
+      const news = await parseRSS(rssData, nDays);
 
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json");
@@ -58,19 +62,42 @@ const server = https.createServer(options, async (req, res) => {
     }
   } else if (req.url.startsWith("/api/analyze-news")) {
     // Endpoint to analyze news using Google AI
-    const rssUrl = "https://ct24.ceskatelevize.cz/rss/hlavni-zpravy";
+    const url = new URL(req.url, `https://${req.headers.host}`);
+    // Support both ?source=src1,src2 and ?source[]=src1&source[]=src2
+    let sources = url.searchParams.getAll("source[]");
+    if (sources.length === 0) {
+      // fallback to ?source=src1,src2 or single ?source=src
+      const rssUrl =
+      url.searchParams.get("source") ||
+      "https://ct24.ceskatelevize.cz/rss/hlavni-zpravy";
+      sources = typeof rssUrl === "string"
+      ? rssUrl
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+      : [];
+    }
+    const nDays = url.searchParams.get("nDays") || 1;
 
     try {
-      // Fetch and parse RSS data
-      const rssData = await fetchRSS(rssUrl);
-      const news = await parseRSS(rssData);
-
+      let news = [];
+      // Aggregate news from all sources
+      const allNews = await Promise.all(
+        sources.map(async (src) => {
+          const rssData = await fetchRSS(src);
+          return parseRSS(rssData, nDays);
+        })
+      );
+      news = allNews.flat();
+      console.log("Fetched news from sources:", sources);
       // Combine news data into a single string for AI processing
       const newsContent = news
         .map((item) => `${item.title}: ${item.description}`)
         .join("\n");
 
-      const prompt = JSON.parse(fs.readFileSync("./src/prompts.json", "utf-8")).news_summary;
+      const prompt = JSON.parse(
+        fs.readFileSync("./src/prompts.json", "utf-8")
+      ).news_summary;
 
       // Use Google AI to analyze the news content
       const response = await ai.models.generateContent({
@@ -125,47 +152,52 @@ server.listen(port, hostname, () => {
 // Function to fetch RSS data
 async function fetchRSS(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, (response) => {
-      if (response.statusCode >= 300 && response.statusCode < 400) {
-        // Handle redirect
-        const locationHeader = response.headers.location;
-        const newUrl = locationHeader.startsWith("http")
-          ? locationHeader
-          : new URL(locationHeader, url).href;
-        if (newUrl) {
-          console.log(`Redirecting to ${newUrl}`);
-          fetchRSS(newUrl).then(resolve).catch(reject);
-        } else {
-          reject(new Error("Redirected but no Location header provided"));
+    https
+      .get(url, (response) => {
+        console.log("Fetching RSS feed from:", url);
+        if (response.statusCode >= 300 && response.statusCode < 400) {
+          // Handle redirect
+          const locationHeader = response.headers.location;
+          const newUrl = locationHeader.startsWith("http")
+            ? locationHeader
+            : new URL(locationHeader, url).href;
+          if (newUrl) {
+            console.log(`Redirecting to ${newUrl}`);
+            fetchRSS(newUrl).then(resolve).catch(reject);
+          } else {
+            reject(new Error("Redirected but no Location header provided"));
+          }
+          return;
         }
-        return;
-      }
 
-      let data = "";
-      response.on("data", (chunk) => {
-        data += chunk;
-      });
+        let data = "";
+        response.on("data", (chunk) => {
+          data += chunk;
+        });
 
-      response.on("end", () => {
-        if (response.statusCode === 200) {
-          resolve(data);
-        } else {
-          reject(new Error(`Failed to fetch RSS feed: ${response.statusCode}`));
-        }
+        response.on("end", () => {
+          if (response.statusCode === 200) {
+            resolve(data);
+          } else {
+            reject(
+              new Error(`Failed to fetch RSS feed: ${response.statusCode}`)
+            );
+          }
+        });
+      })
+      .on("error", (error) => {
+        reject(error);
       });
-    }).on("error", (error) => {
-      reject(error);
-    });
   });
 }
 
 // Function to parse RSS data
-async function parseRSS(rssData) {
+async function parseRSS(rssData, nDays) {
   const parsed = await parseStringPromise(rssData);
   const items = parsed.rss.channel[0].item;
 
   const oneDayAgo = new Date();
-  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+  oneDayAgo.setDate(oneDayAgo.getDate() - nDays);
 
   return items
     .map((item) => ({

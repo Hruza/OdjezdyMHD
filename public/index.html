@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body class="bg-fixed bg-gradient-to-b from-[#437ccc] to-[#2292A4]">
-    <div id="dashboard-container" class="snap-y snap-mandatory overflow-y-scroll scroll-smooth h-screen">
+    <div id="dashboard-container" class="snap-y snap-proximity overflow-y-scroll scroll-smooth h-screen">
     <div class="snap-start h-0"></div>
       <!-- <div
     <div
@@ -35,7 +35,12 @@
         data-config='{
         "type": "news_summary",
         "refreshInterval": 1800,
-        "apiUrl": "./api/analyze-news"
+        "apiUrl": "./api/analyze-news",
+        "source":[
+          "https://ct24.ceskatelevize.cz/rss/rubrika/regiony/hlavni-mesto-praha-15",
+          "https://ct24.ceskatelevize.cz/rss/hlavni-zpravy"
+        ],
+        "nDays":2
         }'
       ></div>
       <script>
